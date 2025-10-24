@@ -1,0 +1,32 @@
+# LangChain core (for agent orchestration)
+langchain>=0.1.0
+langchain-community>=0.0.19
+langchain-openai
+
+# Vector DB / embedding / retrieval
+chromadb>=0.4.22
+sentence-transformers
+numpy
+pandas
+scikit-learn
+
+# LLM APIs (OpenRouter, MistralAI, Groq, etc)
+langchain-mistralai
+langchain-groq
+openrouter
+groq
+
+# Web search (SerpAPI)
+google-search-results
+
+# Transformers, RLHF, and training
+torch>=2.0.0
+transformers>=4.30.0
+trl
+accelerate
+datasets
+
+# Utilities and API serving
+python-dotenv
+fastapi
+uvicorn
