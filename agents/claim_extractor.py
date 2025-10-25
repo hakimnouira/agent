@@ -1,6 +1,5 @@
 from agents.llm_selector import get_best_llm
 
-
 class ClaimExtractorAgent:
     def __init__(self):
         self.llm = get_best_llm("claim_extraction")
@@ -22,7 +21,6 @@ class ClaimExtractorAgent:
         
         result = self.llm.invoke(prompt)
         
-        # Extract content from LangChain response
         if hasattr(result, "content"):
             text = result.content
         elif isinstance(result, dict) and "content" in result:
@@ -30,7 +28,6 @@ class ClaimExtractorAgent:
         else:
             text = str(result)
         
-        # Robust splitting and filtering
         claims = [
             line.strip() 
             for line in text.split('\n') 
@@ -38,3 +35,27 @@ class ClaimExtractorAgent:
         ]
         
         return claims if claims else None
+    
+    def extract_claims_with_explanation(self, article_text):
+        """XAI: Returns claims with explanations."""
+        claims = self.extract_claims(article_text)
+        
+        if not claims:
+            return {
+                'claims': [],
+                'explanation': 'No verifiable factual claims found in the text. The content may be purely opinion-based or lacks concrete statements.'
+            }
+        
+        explanation = f"Identified {len(claims)} verifiable claim(s) from the article. These are atomic, fact-based statements that can be independently verified."
+        
+        return {
+            'claims': claims,
+            'explanation': explanation,
+            'claim_details': [
+                {
+                    'claim': claim,
+                    'reason': 'Contains verifiable factual assertion'
+                }
+                for claim in claims
+            ]
+        }

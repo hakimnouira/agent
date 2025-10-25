@@ -3,31 +3,59 @@ from agents.llm_selector import get_best_llm
 class AggregatorAgent:
     def __init__(self):
         self.llm = get_best_llm("aggregation")
-
+    
     def aggregate(self, support_score, source_score, verdict):
         prompt = (
-           "You are an expert in credibility aggregation for news claims. Given the support score (from evidence), "
-            "the source credibility score, and the verdict label ('support', 'contradict', or 'unrelated'),"
-            "output a FINAL credibility score for this claim, as a single float from 1 (unreliable) to 5 (highly credible). "
-            "Weight 'support' highest, 'contradict' as lowest, and 'unrelated' as low. Your answer must be ONLY the number.\n"
-            f"Support Score: {support_score}\n"
-            f"Source Score: {source_score}\n"
-            f"Verdict: {verdict}\n"
-            "Final Credibility Score (number only):"
+            f"Given:\n"
+            f"- Evidence support score: {support_score}/5\n"
+            f"- Source credibility score: {source_score}/5\n"
+            f"- Verdict: {verdict}\n\n"
+            f"Calculate a final credibility score (1-5) by weighing both factors.\n"
+            f"Return ONLY a number between 1.0 and 5.0"
         )
-        # always use messages for chat APIs
-        message = [{"role": "user", "content": prompt}]
-        result = self.llm.invoke(message)
-        # robust extraction for latest LangChain
+        result = self.llm.invoke(prompt)
+        
+        if hasattr(result, "content"):
+            text = result.content
+        else:
+            text = str(result)
+        
         try:
-            # Most chat models return an object with .content
-            if hasattr(result, "content"):
-                text = result.content
-            elif isinstance(result, dict) and "content" in result:
-                text = result["content"]
-            else:
-                text = str(result)
-            final_score = float(text.strip())
-        except Exception:
-            final_score = (float(support_score) + float(source_score)) / 2
-        return final_score
+            score = float(text.strip())
+            return max(1.0, min(5.0, score))
+        except:
+            return (support_score + source_score) / 2
+    
+    def aggregate_with_explanation(self, support_score, source_score, verdict):
+        """XAI: Returns final score with breakdown."""
+        final_score = self.aggregate(support_score, source_score, verdict)
+        
+        # Calculate contributions
+        support_contribution = (support_score / 5.0) * 50  # 50% weight
+        source_contribution = (source_score / 5.0) * 50    # 50% weight
+        
+        explanation = f"Final score combines evidence quality ({support_score}/5) and source credibility ({source_score}/5)"
+        
+        verdict_impact = {
+            'support': 'Positive: Evidence directly confirms the claim',
+            'contradict': 'Negative: Evidence contradicts the claim',
+            'unrelated': 'Neutral: Limited relevant evidence found'
+        }
+        
+        return {
+            'final_score': final_score,
+            'final_percentage': int((final_score / 5.0) * 100),
+            'explanation': explanation,
+            'breakdown': {
+                'evidence_quality': {
+                    'score': support_score,
+                    'contribution': f"{support_contribution:.1f}%",
+                    'verdict': verdict,
+                    'impact': verdict_impact.get(verdict, 'Unknown')
+                },
+                'source_credibility': {
+                    'score': source_score,
+                    'contribution': f"{source_contribution:.1f}%"
+                }
+            }
+        }
