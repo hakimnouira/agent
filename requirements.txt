@@ -30,3 +30,7 @@ datasets
 python-dotenv
 fastapi
 uvicorn
+
+pytesseract
+Pillow
+opencv-python
